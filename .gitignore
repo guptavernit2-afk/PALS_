@@ -22,3 +22,10 @@ dist/
 build/
 .next/
 out/
+
+# Secrets & Environment Variables
+.env
+.env.*
+*.pem
+secrets.json
+config.json
