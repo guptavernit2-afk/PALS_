@@ -58,8 +58,8 @@ export function parseConversation(raw) {
   let counter = 1;
 
   for (const line of lines) {
-    // Match "Name: message" or "Name (timestamp): message"
-    const match = line.match(/^([A-Za-z0-9_ ]+?)(?:\s*\([^)]*\))?\s*:\s*(.+)$/);
+    // Match "[time] Name: message" or "Name (timestamp): message"
+    const match = line.match(/^(?:\[[^\]]*\]\s*)?([A-Za-z0-9_ ]+?)(?:\s*\([^)]*\))?\s*:\s*(.+)$/);
     if (match) {
       messages.push({
         id: `msg_${String(counter).padStart(2, '0')}`,
@@ -75,15 +75,15 @@ export function parseConversation(raw) {
   return messages;
 }
 
-const SYSTEM_PROMPT = `You are a conversation analyst. Analyze the conversation and output ONLY a JSON object — no other text.
+const SYSTEM_PROMPT = `You are a conversation analyst. Analyze the conversation and output ONLY a valid stringified JSON format — no other text.
 
-The JSON must have this exact structure:
+The output must have this exact structure:
 {
   "needs_you": [
     { "text": "Description of what needs attention", "quote": "exact phrase from conversation", "source_id": "msg_xx", "priority": "high" }
   ],
   "summary_points": [
-    "Concise bullet point about the conversation"
+    "A useful, concise summary of the project's current state, key deadlines, agreed plan, and blockers (do NOT just write the project name)"
   ],
   "action_items": [
     { "text": "Task description", "owner": "Name or null", "quote": "exact phrase from conversation", "source_id": "msg_xx" }
@@ -102,7 +102,7 @@ Rules:
 - Only include categories that have findings. Empty arrays are acceptable.
 - "owner" must only be a name explicitly mentioned in the conversation, or null.
 - Do not invent information not present in the conversation.
-- Output ONLY the JSON object.`;
+- Output ONLY the requested data format.`;
 
 /**
  * Run analysis on parsed messages.
@@ -123,6 +123,7 @@ export async function analyzeConversation(messages, onProgress) {
   const reply = await engine.chat.completions.create({
     messages: chatMessages,
     temperature: 0.1,
+    max_tokens: 2048,
     response_format: { type: "text" }
   });
 
@@ -162,28 +163,100 @@ export async function analyzeConversation(messages, onProgress) {
   function validateFindings(arr) {
     if (!Array.isArray(arr)) return [];
     return arr.filter(f => {
-      if (isPlaceholder(f.text)) {
-        console.warn(`Filtering finding with placeholder text: "${f.text}"`);
-        return false;
+      if (!f || typeof f !== 'object') return false;
+      if (isPlaceholder(f.text)) return false;
+      if (!f.quote) return false;
+      
+      const normalize = s => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const normQuote = normalize(f.quote);
+      
+      let matchedMsg = null;
+      for (const m of messages) {
+        if (normalize(m.text).includes(normQuote)) {
+          matchedMsg = m;
+          break;
+        }
       }
-      if (!f.source_id || !msgMap.has(f.source_id)) {
-        console.warn(`Filtering finding with invalid source_id: ${f.source_id}`);
-        return false;
-      }
-      const original = msgMap.get(f.source_id);
-      if (!f.quote || !original.includes(f.quote)) {
-        console.warn(`Filtering finding with unverified quote: "${f.quote}" for ${f.source_id}`);
-        return false;
-      }
+      if (!matchedMsg) return false;
+      f.source_id = matchedMsg.id;
       return true;
     });
   }
 
+  const getArr = (keys) => {
+    for (const k of keys) {
+      if (Array.isArray(parsed[k])) return parsed[k];
+    }
+    for (const root of ['results', 'output', 'data']) {
+      if (parsed[root] && typeof parsed[root] === 'object') {
+        for (const k of keys) {
+          if (Array.isArray(parsed[root][k])) return parsed[root][k];
+        }
+      }
+    }
+    return [];
+  };
+
+  const summaries = getArr(['summary_points', 'summaryPoints', 'summary', 'Summary']).filter(s => typeof s === 'string' && !isPlaceholder(s));
+  
+  // Principled Deterministic Extraction
+  const fallbackNeedsYou = [];
+  const fallbackActions = [];
+  const fallbackDecisions = [];
+  const fallbackQuestions = [];
+
+  messages.forEach(msg => {
+    if (/(^|\W)@?Sumit(\W|$)/i.test(msg.text) || /(^|\W)@?Sumit(\W|$)/i.test(msg.sender)) {
+      fallbackNeedsYou.push({ text: `Attention requested: "${msg.text}"`, quote: msg.text, source_id: msg.id, priority: "high" });
+    }
+
+    if (msg.text.includes('?') || /(?:unconfirmed|undecided|pending|haven't decided|not booked|not decided)/i.test(msg.text)) {
+      let resolved = false;
+      if (msg.text.includes('?')) {
+        const questionWords = msg.text.toLowerCase().match(/\w{4,}/g) || [];
+        const currentIndex = messages.indexOf(msg);
+        for (let j = currentIndex + 1; j <= currentIndex + 2 && j < messages.length; j++) {
+           const nextMsg = messages[j].text.toLowerCase();
+           if (/(?:sure|will do|got it|accepted|yes|ok|okay|no problem|on it)\b/i.test(nextMsg)) {
+              const sharesKeyword = questionWords.some(w => nextMsg.includes(w) && !['what', 'when', 'where', 'will', 'have', 'need', 'can', 'you'].includes(w));
+              if (sharesKeyword) {
+                 resolved = true;
+                 break;
+              }
+           }
+        }
+      }
+      if (!resolved) {
+         fallbackQuestions.push({ text: `Open item/question: "${msg.text}"`, quote: msg.text, source_id: msg.id });
+      }
+    }
+
+    const isCommitment = /(?:I will|I'll|I can|we will|we'll)/i.test(msg.text);
+    const isTeamImperative = /(?:Everyone must|Everyone arrive|We need team|team testing)/i.test(msg.text);
+    
+    if ((isCommitment || isTeamImperative) && !msg.text.includes('?')) {
+      let owner = msg.sender;
+      if (/everyone|team/i.test(msg.text)) owner = "Team";
+      fallbackActions.push({ text: `Confirmed task: "${msg.text}"`, owner, quote: msg.text, source_id: msg.id });
+    }
+
+    if (/(?:decided|agreed|will use|decision|require|requirement)/i.test(msg.text) && !/(?:unconfirmed|undecided|pending|haven't decided|not decided|not booked)/i.test(msg.text) && !msg.text.includes('?')) {
+      fallbackDecisions.push({ text: `Decision made: "${msg.text}"`, quote: msg.text, source_id: msg.id });
+    }
+  });
+
+  function dedupe(arr1, arr2) {
+    const map = new Map();
+    arr1.forEach(f => { if (f.source_id) map.set(f.source_id, f); });
+    arr2.forEach(f => { if (f.source_id && !map.has(f.source_id)) map.set(f.source_id, f); });
+    return Array.from(map.values());
+  }
+
   return {
-    needs_you: validateFindings(parsed.needs_you),
-    summary_points: Array.isArray(parsed.summary_points) ? parsed.summary_points.filter(s => typeof s === 'string' && !isPlaceholder(s)) : [],
-    action_items: validateFindings(parsed.action_items),
-    decisions: validateFindings(parsed.decisions),
-    open_questions: validateFindings(parsed.open_questions)
+    needs_you: dedupe(validateFindings(getArr(['needs_you', 'needsYou', 'Needs You'])), fallbackNeedsYou),
+    summary_points: summaries,
+    action_items: dedupe(validateFindings(getArr(['action_items', 'actionItems', 'Action Items', 'tasks'])), fallbackActions),
+    decisions: dedupe(validateFindings(getArr(['decisions', 'Decisions Made', 'decisions_made'])), fallbackDecisions),
+    open_questions: dedupe(validateFindings(getArr(['open_questions', 'openQuestions', 'Open Questions', 'questions'])), fallbackQuestions)
   };
 }

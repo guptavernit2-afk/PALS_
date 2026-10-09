@@ -6,7 +6,7 @@
  * All model-generated content is rendered via safe DOM APIs (textContent / createTextNode).
  */
 
-import { initEngine, isEngineReady, parseConversation, analyzeConversation } from './engine.js';
+import { initEngine, isEngineReady, parseConversation, analyzeConversation } from './engine.js?v=8';
 
 // ── Sample Conversation ──
 const SAMPLE_CONVERSATION = `Alice: Hey, are we still meeting for the hackathon planning tomorrow at 10 AM?

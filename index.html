@@ -31,8 +31,10 @@
       </nav>
       <div class="sidebar-footer">
         <div class="privacy-badge" id="privacy-badge">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          <div>
+          <div class="privacy-icon-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div class="privacy-text">
             <span class="privacy-label">Private by design</span>
             <span class="privacy-detail">All analysis runs locally</span>
           </div>
@@ -50,156 +52,183 @@
 
     <!-- ═══ Main Content ═══ -->
     <main class="main-content">
+      <div class="content-wrapper">
 
-      <!-- ── Page: Analyze ── -->
-      <div class="page active" id="page-analyze">
+        <!-- ── Page: Analyze ── -->
+        <div class="page active" id="page-analyze">
 
-        <!-- Hero heading -->
-        <div class="page-header">
-          <h1 class="page-title">Catch up on what matters.</h1>
-          <p class="page-subtitle">Paste a conversation and get an instant, private breakdown of decisions, action items, and open questions — powered by AI running entirely in your browser.</p>
+          <!-- Hero heading -->
+          <div class="page-header">
+            <div class="header-tags">
+              <span class="tag-badge">Local AI</span>
+              <span class="tag-badge">WebLLM Engine</span>
+            </div>
+            <h1 class="page-title">Catch up on what matters.</h1>
+            <p class="page-subtitle">Paste a conversation and get an instant, private breakdown of decisions, action items, and open questions — analyzed directly in your browser.</p>
+          </div>
+
+          <!-- Model status -->
+          <div class="model-status" id="model-status">
+            <div class="model-dot" id="model-dot"></div>
+            <span id="model-status-text">Model not loaded</span>
+          </div>
+
+          <!-- Input panel -->
+          <section class="input-panel" id="input-panel">
+            <div class="input-panel-header">
+              <h2>Conversation Input</h2>
+              <div class="input-actions">
+                <button class="text-btn" id="load-sample-btn" type="button">Load sample</button>
+                <button class="text-btn" id="clear-btn" type="button">Clear text</button>
+              </div>
+            </div>
+            <div class="textarea-wrapper">
+              <textarea id="conversation-input" placeholder="Paste your conversation transcript here...&#10;&#10;Format: one message per line&#10;Alice: Hey, are we still meeting tomorrow?&#10;Bob: Yes, 3 PM works for me." spellcheck="false"></textarea>
+              <div class="textarea-overlay">
+                <span class="char-count" id="char-count">0 characters</span>
+              </div>
+            </div>
+            <div class="input-footer">
+              <p class="input-hint" id="input-hint"></p>
+              <button class="primary-btn" id="analyze-btn" type="button">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                Analyze Conversation
+              </button>
+            </div>
+          </section>
+
+          <!-- Progress panel -->
+          <section class="progress-panel hidden" id="progress-panel">
+            <div class="progress-content">
+              <div class="spinner-wrapper">
+                <div class="spinner" id="spinner"></div>
+              </div>
+              <h3 id="progress-title">Preparing model…</h3>
+              <p class="progress-detail" id="progress-detail">This may take a moment on the first run as weights are cached.</p>
+              <div class="progress-track">
+                <div class="progress-fill" id="progress-fill"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Error panel -->
+          <section class="error-panel hidden" id="error-panel">
+            <div class="error-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </div>
+            <h3 class="error-title">Analysis Interrupted</h3>
+            <p class="error-detail" id="error-detail">An unknown error occurred.</p>
+            <button class="secondary-btn" id="retry-btn" type="button">Try again</button>
+          </section>
+
+          <!-- Results workspace -->
+          <section class="results-workspace hidden" id="results-workspace">
+            <div class="results-header">
+              <h2>Analysis Results</h2>
+              <button class="secondary-btn" id="new-analysis-btn" type="button">
+                <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                New Analysis
+              </button>
+            </div>
+
+            <div class="results-grid">
+              <!-- Needs You -->
+              <div class="result-section needs-you-section hidden" id="section-needs-you">
+                <div class="section-label">
+                  <span class="section-icon needs-you-icon">!</span>
+                  Needs Your Attention
+                </div>
+                <div class="cards-list" id="needs-you-list"></div>
+              </div>
+
+              <!-- Quick Summary -->
+              <div class="result-section summary-section" id="section-summary">
+                <div class="section-label">
+                  <svg class="section-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
+                  Quick Summary
+                </div>
+                <ul class="summary-list" id="summary-list"></ul>
+              </div>
+
+              <!-- Action Items -->
+              <div class="result-section hidden" id="section-actions">
+                <div class="section-label">
+                  <svg class="section-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                  Action Items
+                </div>
+                <div class="cards-list" id="actions-list"></div>
+              </div>
+
+              <!-- Decisions Made -->
+              <div class="result-section hidden" id="section-decisions">
+                <div class="section-label">
+                  <svg class="section-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  Decisions Made
+                </div>
+                <div class="cards-list" id="decisions-list"></div>
+              </div>
+
+              <!-- Open Questions -->
+              <div class="result-section hidden" id="section-questions">
+                <div class="section-label">
+                  <svg class="section-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  Open Questions
+                </div>
+                <div class="cards-list" id="questions-list"></div>
+              </div>
+            </div>
+          </section>
+
         </div>
 
-        <!-- Model status -->
-        <div class="model-status" id="model-status">
-          <div class="model-dot" id="model-dot"></div>
-          <span id="model-status-text">Model not loaded</span>
+        <!-- ── Page: About ── -->
+        <div class="page" id="page-about">
+          <div class="page-header">
+            <h1 class="page-title">About CatchUp</h1>
+            <p class="page-subtitle">Built for the PROTOCOL X hackathon by team PALS_.</p>
+          </div>
+          <div class="about-content">
+            <div class="about-card">
+              <div class="about-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 16 16 12 12 8"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              </div>
+              <div>
+                <h3>What it does</h3>
+                <p>CatchUp uses a genuine pretrained AI model (Llama 3.2 1B) running entirely in your browser via WebLLM/WebGPU. Paste any conversation and get an instant breakdown of what needs your attention, action items, decisions, and open questions.</p>
+              </div>
+            </div>
+            <div class="about-card">
+              <div class="about-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <div>
+                <h3>Privacy first</h3>
+                <p>Your conversation text never leaves your device. The AI model runs locally using your GPU. Only the model weights are downloaded once and cached — no conversation data is ever transmitted to any server.</p>
+              </div>
+            </div>
+            <div class="about-card">
+              <div class="about-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              </div>
+              <div>
+                <h3>How it works</h3>
+                <ol>
+                  <li>Paste or load a sample conversation</li>
+                  <li>The AI model initializes in your browser (first time takes ~30s)</li>
+                  <li>Analysis runs entirely on your device's GPU</li>
+                  <li>Results are parsed, validated against source messages, and displayed</li>
+                </ol>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <!-- Input panel -->
-        <section class="input-panel" id="input-panel">
-          <div class="input-panel-header">
-            <h2>Conversation</h2>
-            <div class="input-actions">
-              <button class="text-btn" id="load-sample-btn" type="button">Load sample</button>
-              <button class="text-btn" id="clear-btn" type="button">Clear</button>
-            </div>
-          </div>
-          <div class="textarea-wrapper">
-            <textarea id="conversation-input" placeholder="Paste your conversation here&#10;&#10;Format: one message per line&#10;Alice: Hey, are we still meeting tomorrow?&#10;Bob: Yes, 3 PM works for me." spellcheck="false"></textarea>
-            <span class="char-count" id="char-count">0 characters</span>
-          </div>
-          <div class="input-footer">
-            <p class="input-hint" id="input-hint"></p>
-            <button class="primary-btn" id="analyze-btn" type="button">
-              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              Analyze
-            </button>
-          </div>
-        </section>
-
-        <!-- Progress panel -->
-        <section class="progress-panel hidden" id="progress-panel">
-          <div class="progress-content">
-            <div class="spinner" id="spinner"></div>
-            <h3 id="progress-title">Preparing model…</h3>
-            <p class="progress-detail" id="progress-detail">This may take a moment on the first run.</p>
-            <div class="progress-track">
-              <div class="progress-fill" id="progress-fill"></div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Error panel -->
-        <section class="error-panel hidden" id="error-panel">
-          <div class="error-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-          </div>
-          <h3 class="error-title">Something went wrong</h3>
-          <p class="error-detail" id="error-detail">An unknown error occurred.</p>
-          <button class="secondary-btn" id="retry-btn" type="button">Try again</button>
-        </section>
-
-        <!-- Results workspace -->
-        <section class="results-workspace hidden" id="results-workspace">
-          <div class="results-header">
-            <h2>Analysis Results</h2>
-            <button class="text-btn" id="new-analysis-btn" type="button">
-              <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-              New analysis
-            </button>
-          </div>
-
-          <!-- Needs You -->
-          <div class="result-section needs-you-section hidden" id="section-needs-you">
-            <div class="section-label">
-              <span class="section-icon needs-you-icon">!</span>
-              Needs Your Attention
-            </div>
-            <div class="cards-list" id="needs-you-list"></div>
-          </div>
-
-          <!-- Quick Summary -->
-          <div class="result-section" id="section-summary">
-            <div class="section-label">
-              <svg class="section-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>
-              Quick Summary
-            </div>
-            <ul class="summary-list" id="summary-list"></ul>
-          </div>
-
-          <!-- Action Items -->
-          <div class="result-section hidden" id="section-actions">
-            <div class="section-label">
-              <svg class="section-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-              Action Items
-            </div>
-            <div class="cards-list" id="actions-list"></div>
-          </div>
-
-          <!-- Decisions Made -->
-          <div class="result-section hidden" id="section-decisions">
-            <div class="section-label">
-              <svg class="section-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              Decisions Made
-            </div>
-            <div class="cards-list" id="decisions-list"></div>
-          </div>
-
-          <!-- Open Questions -->
-          <div class="result-section hidden" id="section-questions">
-            <div class="section-label">
-              <svg class="section-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              Open Questions
-            </div>
-            <div class="cards-list" id="questions-list"></div>
-          </div>
-        </section>
 
       </div>
-
-      <!-- ── Page: About ── -->
-      <div class="page" id="page-about">
-        <div class="page-header">
-          <h1 class="page-title">About CatchUp</h1>
-          <p class="page-subtitle">Built for the PROTOCOL X hackathon by team PALS_.</p>
-        </div>
-        <div class="about-content">
-          <div class="about-card">
-            <h3>What it does</h3>
-            <p>CatchUp uses a genuine pretrained AI model (Llama 3.2 1B) running entirely in your browser via WebLLM/WebGPU. Paste any conversation and get an instant breakdown of what needs your attention, action items, decisions, and open questions.</p>
-          </div>
-          <div class="about-card">
-            <h3>Privacy first</h3>
-            <p>Your conversation text never leaves your device. The AI model runs locally using your GPU. Only the model weights are downloaded once and cached — no conversation data is ever transmitted to any server.</p>
-          </div>
-          <div class="about-card">
-            <h3>How it works</h3>
-            <ol>
-              <li>Paste or load a sample conversation</li>
-              <li>The AI model initializes in your browser (first time takes ~30s)</li>
-              <li>Analysis runs entirely on your device's GPU</li>
-              <li>Results are parsed, validated against source messages, and displayed</li>
-            </ol>
-          </div>
-        </div>
-      </div>
-
     </main>
 
   </div>
   <!-- Overlay for mobile sidebar -->
   <div class="sidebar-overlay hidden" id="sidebar-overlay"></div>
-  <script type="module" src="app.js"></script>
+  <script type="module" src="app.js?v=8"></script>
 </body>
 </html>
