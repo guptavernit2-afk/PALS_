@@ -624,3 +624,34 @@ button { cursor: pointer; font-family: var(--font-sans); }
   .finding-meta { flex-direction: column; gap: var(--space-2); }
   .about-card { flex-direction: column; }
 }
+
+/* ── File Drop Zone ── */
+.file-drop-zone {
+  background-color: #000;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  cursor: pointer;
+  margin-bottom: var(--space-4);
+  transition: border-color 0.2s, background-color 0.2s;
+}
+.file-drop-zone:hover, .file-drop-zone.dragover {
+  border-color: #ef4444;
+  background-color: #0a0a0a;
+}
+.drop-icon {
+  width: 24px;
+  height: 24px;
+  color: #ef4444;
+}
+.drop-text {
+  color: #888;
+  font-family: monospace;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+}

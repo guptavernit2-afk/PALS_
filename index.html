@@ -82,6 +82,13 @@
                 <button class="text-btn" id="clear-btn" type="button">Clear text</button>
               </div>
             </div>
+            
+            <div id="file-drop-zone" class="file-drop-zone">
+              <input type="file" id="file-input" accept=".md,.txt" style="display: none;" />
+              <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 16 4-4 4 4"/></svg>
+              <div class="drop-text">DROP PROMPT.MD OR CLICK TO BROWSE</div>
+            </div>
+
             <div class="textarea-wrapper">
               <textarea id="conversation-input" placeholder="Paste your conversation transcript here...&#10;&#10;Format: one message per line&#10;Alice: Hey, are we still meeting tomorrow?&#10;Bob: Yes, 3 PM works for me." spellcheck="false"></textarea>
               <div class="textarea-overlay">

@@ -46,6 +46,8 @@ const dom = {
   clearBtn:        $('clear-btn'),
   analyzeBtn:      $('analyze-btn'),
   inputHint:       $('input-hint'),
+  fileDropZone:    $('file-drop-zone'),
+  fileInput:       $('file-input'),
 
   // Progress
   progressPanel:   $('progress-panel'),
@@ -131,6 +133,50 @@ dom.clearBtn.addEventListener('click', () => {
   updateCharCount();
   dom.inputHint.textContent = '';
 });
+
+// ══════════════
+// File Upload
+// ══════════════
+if (dom.fileDropZone && dom.fileInput) {
+  dom.fileDropZone.addEventListener('click', () => dom.fileInput.click());
+  
+  dom.fileDropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dom.fileDropZone.classList.add('dragover');
+  });
+  
+  dom.fileDropZone.addEventListener('dragleave', () => {
+    dom.fileDropZone.classList.remove('dragover');
+  });
+  
+  dom.fileDropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dom.fileDropZone.classList.remove('dragover');
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  dom.fileInput.addEventListener('change', (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleFile(e.target.files[0]);
+    }
+  });
+}
+
+function handleFile(file) {
+  if (!file.name.endsWith('.md') && !file.name.endsWith('.txt')) {
+    dom.inputHint.textContent = 'Please drop a Markdown (.md) or Text (.txt) file.';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    dom.textarea.value = e.target.result;
+    updateCharCount();
+    dom.inputHint.textContent = '';
+  };
+  reader.readAsText(file);
+}
 
 // ══════════════
 // Model Status
