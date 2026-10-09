@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CatchUp - Local AI Proof of Concept</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>CatchUp</h1>
+      <p>Local AI Proof of Concept. Analyzes conversations strictly on your device.</p>
+    </header>
+    
+    <main>
+      <section class="conversation-section">
+        <h2>Sample Conversation</h2>
+        <div id="chat-container" class="chat-container">
+          <!-- Populated by JS -->
+        </div>
+        <button id="analyze-btn" class="primary-btn">Analyze Conversation</button>
+      </section>
+
+      <section class="status-section">
+        <div id="status-container" class="hidden">
+          <h3 id="status-text">Initializing...</h3>
+          <p id="status-detail"></p>
+          <div class="progress-bar">
+            <div id="progress-fill" class="progress-fill"></div>
+          </div>
+        </div>
+        <div id="error-container" class="hidden error">
+          <p id="error-text"></p>
+          <button id="retry-btn" class="secondary-btn">Retry</button>
+        </div>
+      </section>
+
+      <section id="results-section" class="results-section hidden">
+        <h2>Analysis Results</h2>
+        <div class="result-card">
+          <h3>Summary</h3>
+          <p id="summary-text"></p>
+        </div>
+        <div class="result-card">
+          <h3>Key Findings</h3>
+          <ul id="findings-list">
+            <!-- Populated by JS -->
+          </ul>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="app.js?v=4"></script>
+</body>
+</html>
