@@ -169,11 +169,18 @@ function handleFile(file) {
     dom.inputHint.textContent = 'Please drop a Markdown (.md) or Text (.txt) file.';
     return;
   }
+  if (file.size > 1024 * 1024) { // 1MB limit
+    dom.inputHint.textContent = 'File is too large. Please upload a file smaller than 1MB.';
+    return;
+  }
   const reader = new FileReader();
   reader.onload = (e) => {
     dom.textarea.value = e.target.result;
     updateCharCount();
     dom.inputHint.textContent = '';
+  };
+  reader.onerror = () => {
+    dom.inputHint.textContent = 'Failed to read file.';
   };
   reader.readAsText(file);
 }
