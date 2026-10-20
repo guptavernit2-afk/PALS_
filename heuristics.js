@@ -64,14 +64,14 @@ export function extractDeterministicFindings(messages) {
 
 export function dedupe(arr1, arr2) {
     const map = new Map();
-    const seenTexts = new Set();
 
+    // Deduplicate only identical findings from the same source
+    // This preserves distinct findings from different sources even if their text matches
     [...arr1, ...arr2].forEach(f => {
-      if (!f || !f.text) return;
+      if (!f || !f.text || !f.source_id) return;
       const key = f.source_id + '::' + f.text;
-      if (!map.has(key) && !seenTexts.has(f.text)) {
+      if (!map.has(key)) {
         map.set(key, f);
-        seenTexts.add(f.text);
       }
     });
     return Array.from(map.values());
