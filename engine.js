@@ -9,6 +9,7 @@
  */
 
 import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
+import { extractDeterministicFindings, dedupe } from "./heuristics.js";
 
 const MODEL_ID = "Llama-3.2-1B-Instruct-q4f16_1-MLC";
 
@@ -199,72 +200,8 @@ export async function analyzeConversation(messages, onProgress) {
 
   const summaries = getArr(['summary_points', 'summaryPoints', 'summary', 'Summary']).filter(s => typeof s === 'string' && !isPlaceholder(s));
   
-  // Principled Deterministic Extraction
-  const fallbackNeedsYou = [];
-  const fallbackActions = [];
-  const fallbackDecisions = [];
-  const fallbackQuestions = [];
-
-  messages.forEach(msg => {
-    if (/(^|\W)@?Sumit(\W|$)/i.test(msg.text) || /(^|\W)@?Sumit(\W|$)/i.test(msg.sender)) {
-      fallbackNeedsYou.push({ text: `Attention requested: "${msg.text}"`, quote: msg.text, source_id: msg.id, priority: "high" });
-    }
-
-    if (msg.text.includes('?') || /(?:unconfirmed|undecided|pending|haven't decided|not booked|not decided)/i.test(msg.text)) {
-      let resolved = false;
-      if (msg.text.includes('?')) {
-        const questionWords = msg.text.toLowerCase().match(/\w{4,}/g) || [];
-        const currentIndex = messages.indexOf(msg);
-        for (let j = currentIndex + 1; j <= currentIndex + 2 && j < messages.length; j++) {
-           const nextMsg = messages[j].text.toLowerCase();
-           if (/(?:sure|will do|got it|accepted|yes|ok|okay|no problem|on it|i'll|i will)\b/i.test(nextMsg)) {
-              const sharesKeyword = questionWords.some(w => nextMsg.includes(w) && !['what', 'when', 'where', 'will', 'have', 'need', 'can', 'you'].includes(w));
-              if (sharesKeyword) {
-                 resolved = true;
-                 break;
-              }
-           }
-        }
-      }
-      if (!resolved && (msg.text.includes('?') || /unconfirmed|undecided|pending|haven't decided|not booked|not decided/i.test(msg.text))) {
-        fallbackQuestions.push({ text: `Open item/question: "${msg.text}"`, quote: msg.text, source_id: msg.id });
-      }
-    }
-
-    const isCommitment = /(?:I will|I'll|I can|we will|we'll)/i.test(msg.text);
-    const isTeamImperative = /(?:Everyone must|Everyone arrive|We need team|team testing)/i.test(msg.text);
-
-    if ((isCommitment || isTeamImperative) && !msg.text.includes('?')) {
-      let owner = msg.sender;
-      // If message explicitly mentions an assignee (e.g. "@Bob" or "Bob, please"), check if someone else is assigned
-      const mentionMatch = msg.text.match(/^@([A-Za-z0-9_]+)/);
-      if (mentionMatch) {
-        owner = mentionMatch[1];
-      }
-      if (/everyone|team/i.test(msg.text)) owner = "Team";
-      fallbackActions.push({ text: `Confirmed task: "${msg.text}"`, owner, quote: msg.text, source_id: msg.id });
-    }
-
-    if (/(?:decided|agreed|will use|decision|require|requirement)/i.test(msg.text) && !/(?:maybe|unconfirmed|undecided|pending|haven't decided|not decided|not booked)/i.test(msg.text) && !msg.text.includes('?')) {
-      fallbackDecisions.push({ text: `Decision made: "${msg.text}"`, quote: msg.text, source_id: msg.id });
-    }
-  });
-
-  function dedupe(arr1, arr2) {
-    const map = new Map();
-    // Also deduplicate by exact quote/text to avoid repeated identical findings
-    const seenTexts = new Set();
-
-    [...arr1, ...arr2].forEach(f => {
-      if (!f || !f.text) return;
-      const key = f.source_id + '::' + f.text;
-      if (!map.has(key) && !seenTexts.has(f.text)) {
-        map.set(key, f);
-        seenTexts.add(f.text);
-      }
-    });
-    return Array.from(map.values());
-  }
+  // Principled Deterministic Extraction via heuristics.js
+  const { fallbackNeedsYou, fallbackActions, fallbackDecisions, fallbackQuestions } = extractDeterministicFindings(messages);
 
   return {
     needs_you: dedupe(validateFindings(getArr(['needs_you', 'needsYou', 'Needs You'])), fallbackNeedsYou),
