@@ -106,14 +106,16 @@ runTest('Deduplication (same source)',
   }
 );
 
-// 8. Global deduplication (different source)
-runTest('Global deduplication (different source)',
+// 8. Identical text from different sources stays separate (contract from 0c06972)
+runTest('Distinct sources are not merged on identical text',
   [],
   (res, dedupe) => {
     const dupe1 = { text: "Task A", source_id: "msg_1" };
     const dupe2 = { text: "Task A", source_id: "msg_2" };
     const deduped = dedupe([dupe1], [dupe2]);
-    assert.strictEqual(deduped.length, 1, 'Currently deduplicates across sources if text matches exactly');
+    assert.strictEqual(deduped.length, 2, 'Identical text from different source IDs must remain separate findings');
+    assert.strictEqual(deduped[0].source_id, 'msg_1');
+    assert.strictEqual(deduped[1].source_id, 'msg_2');
   }
 );
 
