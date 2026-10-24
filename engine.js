@@ -198,7 +198,19 @@ export async function analyzeConversation(messages, onProgress) {
     return [];
   };
 
-  const summaries = getArr(['summary_points', 'summaryPoints', 'summary', 'Summary']).filter(s => typeof s === 'string' && !isPlaceholder(s));
+  const summaries = getArr(['summary_points', 'summaryPoints', 'summary', 'Summary']);
+
+// Filter out placeholders and invalid summaries
+const validSummaries = summaries.filter(s => {
+  if (!s || typeof s !== 'string') return false;
+  if (isPlaceholder(s)) return false;
+  // Additional validation: summary should not be a generic instruction
+  const lower = s.toLowerCase();
+  return !/(?:description|task|decision|question|point|conversation|exact phrase|from conversation)/i.test(lower);
+});
+
+// Fallback: if no valid summary, provide a safe default
+const summary_points = validSummaries.length > 0 ? validSummaries : ["This conversation has not yet been summarized."];
   
   // Principled Deterministic Extraction via heuristics.js
   const { fallbackNeedsYou, fallbackActions, fallbackDecisions, fallbackQuestions } = extractDeterministicFindings(messages);

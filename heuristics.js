@@ -1,3 +1,4 @@
+
 /**
  * heuristics.js — Deterministic Extraction Logic
  * 
@@ -43,13 +44,16 @@ export function extractDeterministicFindings(messages) {
     const isCommitment = /(?:I will|I'll|I can|we will|we'll)/i.test(msg.text);
     const isTeamImperative = /(?:Everyone must|Everyone arrive|We need team|team testing)/i.test(msg.text);
 
-    if ((isCommitment || isTeamImperative) && !msg.text.includes('?')) {
+    if ((isCommitment || isTeamImperative || msg.text.match(/^@Team/i)) && !msg.text.includes('?')) {
       let owner = msg.sender;
       const mentionMatch = msg.text.match(/^@([A-Za-z0-9_]+)/);
       if (mentionMatch) {
         owner = mentionMatch[1];
       }
-      if (/everyone|team/i.test(msg.text)) owner = "Team";
+      // Ensure owner is "Team" if the message starts with @Team
+      if (msg.text.match(/^@Team/i)) {
+        owner = "Team";
+      }
       fallbackActions.push({ text: `Confirmed task: "${msg.text}"`, owner, quote: msg.text, source_id: msg.id });
     }
 
